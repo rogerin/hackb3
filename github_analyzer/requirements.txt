@@ -1,0 +1,29 @@
+# Web Framework e Servidor ASGI/WSGI
+fastapi
+uvicorn
+gunicorn
+jinja2
+python-multipart
+
+# Orquestração de Agentes e Modelos de Linguagem
+langchain-core
+langchain_openai
+langsmith
+langgraph
+langgraph-checkpoint-sqlite
+
+# Clientes HTTP e APIs
+httpx
+requests
+authlib
+
+# Análise de Código e Git
+GitPython
+tree-sitter
+tree-sitter-languages
+tree-sitter-python
+
+# Utilitários e Configuração
+python-dotenv
+pydantic-settings
+itsdangerous

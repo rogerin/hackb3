@@ -1,0 +1,30 @@
+# Usar python:3.11-slim como base
+FROM python:3.11-slim
+
+# Definir o diretório de trabalho
+WORKDIR /app
+
+# Instalar dependências do sistema
+RUN apt-get update && \
+    apt-get install -y git build-essential && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copiar os requisitos PRIMEIRO para aproveitar o cache do Docker
+COPY github_analyzer/requirements.txt .
+
+# Instalar as dependências Python no site-packages do sistema
+# Isso garante que elas estarão no PYTHONPATH padrão para todos os usuários
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Agora, crie o usuário não-root
+RUN useradd --create-home appuser
+
+# Copiar o restante do código da aplicação
+COPY --chown=appuser:appuser github_analyzer/ .
+
+# Mudar para o usuário não-root para a execução
+USER appuser
+
+# Expõe a porta e define o comando de inicialização
+EXPOSE 8000
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "app.main:app"]

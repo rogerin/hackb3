@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - GitHub Analyzer{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    Meus Repositórios
+                </h1>
+                <p class="text-muted">Gerencie a análise automática dos seus repositórios</p>
+            </div>
+            <button class="btn btn-primary" onclick="loadRepositories()">
+                <i class="fas fa-sync-alt me-2"></i>
+                Atualizar Lista
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading spinner -->
+<div id="loading" class="text-center py-5" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Carregando...</span>
+    </div>
+    <p class="mt-3 text-muted">Carregando seus repositórios...</p>
+</div>
+
+<!-- Lista de repositórios -->
+<div id="repositories-container" class="row">
+    <!-- Repositórios serão carregados aqui via JavaScript -->
+</div>
+
+<!-- Modal para configurar webhook -->
+<div class="modal fade" id="webhookModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-webhook me-2"></i>
+                    Configurar Análise Automática
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Isso criará um webhook que analisará automaticamente seu repositório a cada push.
+                </div>
+                <p><strong>Repositório:</strong> <span id="modal-repo-name"></span></p>
+                <p><strong>Descrição:</strong> <span id="modal-repo-description"></span></p>
+                
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="confirmWebhook">
+                    <label class="form-check-label" for="confirmWebhook">
+                        Eu entendo que um webhook será criado neste repositório
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmWebhookSetup()" disabled id="confirmBtn">
+                    <i class="fas fa-plus me-2"></i>
+                    Ativar Análise
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast para notificações -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="notificationToast" class="toast" role="alert">
+        <div class="toast-header">
+            <i class="fas fa-bell me-2"></i>
+            <strong class="me-auto">GitHub Analyzer</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+            <!-- Mensagem será inserida aqui -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentRepo = null;
+
+// Carregar repositórios quando a página carregar
+document.addEventListener('DOMContentLoaded', function() {
+    loadRepositories();
+    
+    // Configurar modal checkbox
+    document.getElementById('confirmWebhook').addEventListener('change', function() {
+        document.getElementById('confirmBtn').disabled = !this.checked;
+    });
+});
+
+async function loadRepositories() {
+    const loading = document.getElementById('loading');
+    const container = document.getElementById('repositories-container');
+    
+    loading.style.display = 'block';
+    container.innerHTML = '';
+    
+    try {
+        const response = await fetch('/api/repositories');
+        if (!response.ok) {
+            if (response.status === 401) {
+                window.location.href = '/';
+                return;
+            }
+            throw new Error('Erro ao carregar repositórios');
+        }
+        
+        const repositories = await response.json();
+        displayRepositories(repositories);
+    } catch (error) {
+        console.error('Erro:', error);
+        showNotification('Erro ao carregar repositórios: ' + error.message, 'error');
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+function displayRepositories(repositories) {
+    const container = document.getElementById('repositories-container');
+    
+    if (repositories.length === 0) {
+        container.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle fa-2x mb-3"></i>
+                    <h5>Nenhum repositório encontrado</h5>
+                    <p>Você não possui repositórios ou eles não estão acessíveis.</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    repositories.forEach(repo => {
+        const repoCard = createRepositoryCard(repo);
+        container.appendChild(repoCard);
+    });
+}
+
+function createRepositoryCard(repo) {
+    const col = document.createElement('div');
+    col.className = 'col-md-6 col-lg-4 mb-4';
+    
+    const languageColor = getLanguageColor(repo.language);
+    const updatedDate = new Date(repo.updated_at).toLocaleDateString('pt-BR');
+    
+    col.innerHTML = `
+        <div class="card h-100 repo-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h5 class="card-title mb-0">
+                        <a href="${repo.html_url}" target="_blank" class="text-decoration-none">
+                            ${repo.name}
+                        </a>
+                    </h5>
+                    ${repo.private ? '<span class="badge bg-warning">Privado</span>' : '<span class="badge bg-success">Público</span>'}
+                </div>
+                
+                <p class="card-text text-muted small">
+                    ${repo.description || 'Sem descrição'}
+                </p>
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center">
+                        ${repo.language ? `
+                            <span class="badge" style="background-color: ${languageColor};">
+                                ${repo.language}
+                            </span>
+                        ` : ''}
+                        <small class="text-muted ms-2">
+                            <i class="fas fa-star"></i> ${repo.stargazers_count}
+                        </small>
+                    </div>
+                    <small class="text-muted">
+                        Atualizado em ${updatedDate}
+                    </small>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <button class="btn btn-primary btn-sm w-100" onclick="setupWebhook('${repo.full_name}', '${repo.name}', '${repo.description || ''}')">
+                    <i class="fas fa-robot me-2"></i>
+                    Ativar Análise Automática
+                </button>
+            </div>
+        </div>
+    `;
+    
+    return col;
+}
+
+function setupWebhook(fullName, name, description) {
+    currentRepo = fullName;
+    document.getElementById('modal-repo-name').textContent = fullName;
+    document.getElementById('modal-repo-description').textContent = description || 'Sem descrição';
+    document.getElementById('confirmWebhook').checked = false;
+    document.getElementById('confirmBtn').disabled = true;
+    
+    const modal = new bootstrap.Modal(document.getElementById('webhookModal'));
+    modal.show();
+}
+
+async function confirmWebhookSetup() {
+    if (!currentRepo) return;
+    
+    const [owner, repo] = currentRepo.split('/');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const originalText = confirmBtn.innerHTML;
+    
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Configurando...';
+    confirmBtn.disabled = true;
+    
+    try {
+        const response = await fetch(`/api/repositories/${owner}/${repo}/select`, {
+            method: 'POST'
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Erro ao configurar webhook');
+        }
+        
+        const result = await response.json();
+        showNotification('Webhook configurado com sucesso! Análise automática ativada.', 'success');
+        
+        // Fechar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('webhookModal'));
+        modal.hide();
+        
+    } catch (error) {
+        console.error('Erro:', error);
+        showNotification('Erro ao configurar webhook: ' + error.message, 'error');
+    } finally {
+        confirmBtn.innerHTML = originalText;
+        confirmBtn.disabled = false;
+    }
+}
+
+function showNotification(message, type = 'info') {
+    const toast = document.getElementById('notificationToast');
+    const toastBody = toast.querySelector('.toast-body');
+    
+    toastBody.innerHTML = message;
+    
+    // Remover classes anteriores e adicionar nova
+    toast.classList.remove('text-bg-success', 'text-bg-danger', 'text-bg-info');
+    if (type === 'success') {
+        toast.classList.add('text-bg-success');
+    } else if (type === 'error') {
+        toast.classList.add('text-bg-danger');
+    } else {
+        toast.classList.add('text-bg-info');
+    }
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+}
+
+function getLanguageColor(language) {
+    const colors = {
+        'JavaScript': '#f1e05a',
+        'Python': '#3572A5',
+        'Java': '#b07219',
+        'TypeScript': '#2b7489',
+        'C#': '#239120',
+        'PHP': '#4F5D95',
+        'C++': '#f34b7d',
+        'C': '#555555',
+        'Go': '#00ADD8',
+        'Rust': '#dea584',
+        'Ruby': '#701516',
+        'Swift': '#ffac45',
+        'Kotlin': '#F18E33',
+        'Dart': '#00B4AB',
+        'HTML': '#e34c26',
+        'CSS': '#1572B6'
+    };
+    
+    return colors[language] || '#6c757d';
+}
+</script>
+{% endblock %}

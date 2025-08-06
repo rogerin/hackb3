@@ -1,0 +1,33 @@
+# Ambientes Virtuais
+.venv/
+venv/
+env/
+
+# Arquivos de Bytecode e Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Arquivos de Build e Distribuição
+build/
+dist/
+*.egg-info/
+*.so
+
+# Arquivos de Variáveis de Ambiente
+# IMPORTANTE: Nunca comite chaves de API ou segredos!
+.env
+*.env
+
+# Arquivos de IDEs e Editores
+.idea/
+.vscode/
+
+# Arquivos específicos do macOS
+.DS_Store
+
+# Relatórios de Cobertura de Testes
+.coverage
+htmlcov/

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Login - GitHub Analyzer{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-body text-center p-5">
+                <div class="mb-4">
+                    <i class="fab fa-github fa-4x text-dark"></i>
+                </div>
+                <h2 class="card-title mb-4">GitHub Analyzer</h2>
+                <p class="card-text text-muted mb-4">
+                    Análise inteligente e automatizada dos seus repositórios GitHub
+                </p>
+                
+                <div class="d-grid">
+                    <a href="/api/login/github" class="btn btn-dark btn-lg">
+                        <i class="fab fa-github me-2"></i>
+                        Entrar com GitHub
+                    </a>
+                </div>
+                
+                <div class="mt-4">
+                    <small class="text-muted">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        Conexão segura via OAuth2
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-robot me-2 text-primary"></i>
+                        Como funciona?
+                    </h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Conecte com sua conta GitHub
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Selecione repositórios para análise
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Receba relatórios automáticos a cada commit
+                        </li>
+                        <li>
+                            <i class="fas fa-check text-success me-2"></i>
+                            Melhore a qualidade do seu código
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

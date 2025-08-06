@@ -1,0 +1,27 @@
+# Estágio único para maior confiabilidade na instalação de dependências
+FROM python:3.11-slim
+
+# Instala dependências do sistema em uma única camada
+RUN apt-get update && apt-get install -y build-essential git npm && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /code
+
+# Cria um usuário não-root para segurança
+RUN useradd --create-home appuser
+
+# Copia os arquivos de dependência e código
+COPY --chown=appuser:appuser requirements.txt .
+COPY --chown=appuser:appuser ./app ./app
+COPY --chown=appuser:appuser gunicorn.conf.py .
+
+# Instala as dependências Python como o usuário não-root
+# O --break-system-packages é necessário em imagens Debian mais recentes para permitir a instalação via pip
+USER appuser
+ENV PATH="/home/appuser/.local/bin:${PATH}"
+RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
+
+# Expõe a porta
+EXPOSE 8000
+
+# Comando para iniciar a aplicação
+CMD ["/home/appuser/.local/bin/gunicorn", "-c", "gunicorn.conf.py", "app.main:app"]
